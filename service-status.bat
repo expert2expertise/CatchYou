@@ -6,4 +6,5 @@ echo.
 call npm run service:status
 
 echo.
+
 pause

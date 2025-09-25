@@ -54,4 +54,5 @@ echo.
 echo To check status:
 echo   node standalone-agent.js status
 echo.
+
 pause

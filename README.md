@@ -177,11 +177,11 @@ node standalone-agent.js
 ### Advanced Usage
 
 ```cmd
-# Start with custom configuration (if using TypeScript version)
-node dist/index.js start --config config/production.json
+# Install the Windows service without using batch scripts
+npm run service:install
 
-# Start with debug logging
-node dist/index.js start --log-level debug
+# Check the Windows service status
+npm run service:status
 ```
 
 ## Monitoring and Detection
@@ -313,10 +313,10 @@ The system supports multiple log formats:
 
 ### Debug Mode
 
-Enable debug logging for detailed troubleshooting:
+Enable verbose output for detailed troubleshooting by running the agent interactively:
 
 ```bash
-node dist/index.js start --log-level debug
+node standalone-agent.js start
 ```
 
 ### Log Locations
@@ -327,53 +327,41 @@ node dist/index.js start --log-level debug
 
 ## Development
 
-### Building from Source
+### Working with the Standalone Runtime
+
+The distributed package runs directly from `standalone-agent.js`, so no TypeScript build step is required. Edit the file to experiment with new detections or policies and restart the agent to observe the changes.
 
 ```bash
-# Install dependencies
+# Install dependencies (optional, for testing or linting tools)
 npm install
 
-# Build TypeScript
-npm run build
-
-# Run tests
+# Run the agent in test mode
 npm test
-
-# Run with coverage
-npm run test:coverage
-
-# Lint code
-npm run lint
 ```
 
 ### Project Structure
 
 ```
-src/
-├── detection-engine/     # AI detection components
-├── response-engine/      # Policy and response handling
-├── endpoint-agent/       # Main agent coordination
-├── shared/              # Common utilities and interfaces
-└── index.ts            # Main entry point
-
-config/                  # Configuration templates
-scripts/                # Service installation scripts
-logs/                   # Application logs (created at runtime)
+standalone-agent.js      # Main AI monitoring agent runtime
+service-manager.js       # Windows service helper CLI
+deploy.bat               # Guided deployment script
+install-service.bat      # Service installation helper
+service-start.bat        # Service start helper
+service-stop.bat         # Service stop helper
+service-status.bat       # Service status helper
+uninstall-service.bat    # Service removal helper
+README.md                # Product documentation
+DEPLOYMENT.md            # Deployment guide
+package.json             # npm metadata and scripts
 ```
 
 ### Testing
 
-The project includes comprehensive unit tests:
+The standalone distribution does not require a build step, and automated tests are optional:
 
 ```bash
-# Run all tests
+# Run the agent in test mode
 npm test
-
-# Run specific test suite
-npm test -- --testPathPattern="detection-engine"
-
-# Watch mode for development
-npm run test:watch
 ```
 
 ## Enterprise Deployment
