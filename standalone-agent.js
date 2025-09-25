@@ -4,8 +4,11 @@
  */
 
 const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const STATUS_FILE_PATH = path.join(__dirname, 'agent-status.json');
 
 class Logger {
   constructor(name) {
@@ -286,6 +289,36 @@ class AIMonitoringAgent {
     this.responseExecutor = new ResponseExecutor();
     this.isRunning = false;
     this.eventCounter = 0;
+    this.statusFilePath = STATUS_FILE_PATH;
+    this.startedAt = null;
+  }
+
+  async persistStatus() {
+    if (!this.isRunning) {
+      return;
+    }
+
+    const status = this.getStatus();
+
+    try {
+      await fs.promises.writeFile(
+        this.statusFilePath,
+        JSON.stringify(status, null, 2),
+        'utf8'
+      );
+    } catch (error) {
+      this.logger.error('Failed to write status file', error);
+    }
+  }
+
+  async clearStatus() {
+    try {
+      await fs.promises.unlink(this.statusFilePath);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        this.logger.error('Failed to clear status file', error);
+      }
+    }
   }
 
   async start() {
@@ -303,6 +336,8 @@ class AIMonitoringAgent {
       this.setupMonitoring();
 
       this.isRunning = true;
+      this.startedAt = new Date().toISOString();
+      await this.persistStatus();
       this.logger.info('AI Monitoring Agent started successfully');
     } catch (error) {
       this.logger.error('Failed to start agent', error);
@@ -323,6 +358,8 @@ class AIMonitoringAgent {
       await this.policyEngine.stop();
 
       this.isRunning = false;
+      this.startedAt = null;
+      await this.clearStatus();
       this.logger.info('AI Monitoring Agent stopped successfully');
     } catch (error) {
       this.logger.error('Failed to stop agent', error);
@@ -332,7 +369,10 @@ class AIMonitoringAgent {
 
   getStatus() {
     return {
+      pid: process.pid,
       isRunning: this.isRunning,
+      startedAt: this.startedAt,
+      updatedAt: new Date().toISOString(),
       eventsProcessed: this.eventCounter,
       components: {
         processDetection: this.processDetection.isRunning,
@@ -356,6 +396,8 @@ class AIMonitoringAgent {
         }
       } catch (error) {
         this.logger.error('Error in process monitoring', error);
+      } finally {
+        await this.persistStatus();
       }
     }, 5000);
   }
@@ -424,6 +466,8 @@ class AIMonitoringAgent {
         success: responseResult.success
       });
 
+      await this.persistStatus();
+
     } catch (error) {
       this.logger.error('Error handling AI detection', error);
     }
@@ -444,36 +488,51 @@ class AIMonitoringAgent {
   }
 }
 
+async function readSharedStatus() {
+  try {
+    const data = await fs.promises.readFile(STATUS_FILE_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 // CLI
 async function main() {
-  const agent = new AIMonitoringAgent();
-  
   const command = process.argv[2];
-  
+
   switch (command) {
-    case 'start':
+    case 'start': {
+      const agent = new AIMonitoringAgent();
       await agent.start();
-      console.log('\\n=== AI Monitoring Agent Started ===');
+      console.log('\n=== AI Monitoring Agent Started ===');
       console.log('The agent is now monitoring for AI tool usage.');
-      console.log('Press Ctrl+C to stop.\\n');
-      
+      console.log('Press Ctrl+C to stop.\n');
+
       // Keep alive
       process.on('SIGINT', async () => {
-        console.log('\\nStopping agent...');
+        console.log('\nStopping agent...');
         await agent.stop();
         console.log('Agent stopped successfully.');
         process.exit(0);
       });
-      
+
       // Show status every 30 seconds
       setInterval(() => {
         const status = agent.getStatus();
         console.log(`[STATUS] Running: ${status.isRunning}, Events Processed: ${status.eventsProcessed}`);
+        agent.persistStatus();
       }, 30000);
-      
+
       break;
-      
-    case 'test':
+    }
+
+    case 'test': {
+      const agent = new AIMonitoringAgent();
       console.log('Starting test mode...');
       await agent.start();
       await agent.triggerTest();
@@ -483,13 +542,24 @@ async function main() {
         process.exit(0);
       }, 3000);
       break;
-      
+    }
+
     case 'status':
-      const status = agent.getStatus();
-      console.log('\\n=== Agent Status ===');
-      console.log(JSON.stringify(status, null, 2));
+      console.log('\n=== Agent Status ===');
+      try {
+        const status = await readSharedStatus();
+
+        if (!status) {
+          console.log('Agent is not running or status file is missing.');
+        } else {
+          console.log(JSON.stringify(status, null, 2));
+        }
+      } catch (error) {
+        console.error('Failed to read agent status:', error.message);
+        process.exitCode = 1;
+      }
       break;
-      
+
     default:
       console.log(`
 === AI Monitoring Agent ===
@@ -511,7 +581,6 @@ The agent monitors for AI tool usage and provides policy-based responses.
       break;
   }
 }
-
 if (require.main === module) {
   main().catch(console.error);
 }

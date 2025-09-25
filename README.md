@@ -85,6 +85,13 @@ The AI Monitoring Agent is a comprehensive solution for monitoring, controlling,
    node standalone-agent.js status
    ```
 
+### Agent Status Tracking
+
+- The agent now writes a shared status file (`agent-status.json`) next to `standalone-agent.js` whenever it is running.
+- `node standalone-agent.js start` creates/updates this file with the current PID, start time, last update timestamp, and component health information.
+- `node standalone-agent.js stop` removes the file so other processes know the agent has shut down.
+- The `node standalone-agent.js status` command now reads this file instead of instantiating a new agent process. If the file is missing you will see `Agent is not running or status file is missing.`.
+
 3. **Uninstall Service** (if needed)
    ```cmd
    uninstall-service.bat
