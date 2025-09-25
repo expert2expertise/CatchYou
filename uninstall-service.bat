@@ -12,4 +12,5 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo Service uninstalled successfully!
 echo.
+
 pause

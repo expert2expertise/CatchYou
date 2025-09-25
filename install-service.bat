@@ -2,18 +2,9 @@
 echo Installing AI Monitoring Agent as Windows Service...
 echo.
 
-REM Build the project first
-echo Building project...
-call npm run build
-if %ERRORLEVEL% neq 0 (
-    echo Build failed!
-    pause
-    exit /b 1
-)
-
-REM Install the service
+REM Install the service using the standalone runtime
 echo Installing service...
-call npm run service:install -- --enable-watchdog
+call npm run service:install
 if %ERRORLEVEL% neq 0 (
     echo Service installation failed!
     pause
@@ -29,4 +20,5 @@ echo - Check status: service-status.bat
 echo - Stop the service: service-stop.bat
 echo - Uninstall: uninstall-service.bat
 echo.
+
 pause
