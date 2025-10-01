@@ -286,6 +286,7 @@ class AIMonitoringAgent {
     this.responseExecutor = new ResponseExecutor();
     this.isRunning = false;
     this.eventCounter = 0;
+    this.monitorInterval = null;
   }
 
   async start() {
@@ -322,6 +323,11 @@ class AIMonitoringAgent {
       await this.processDetection.stop();
       await this.policyEngine.stop();
 
+      if (this.monitorInterval) {
+        clearInterval(this.monitorInterval);
+        this.monitorInterval = null;
+      }
+
       this.isRunning = false;
       this.logger.info('AI Monitoring Agent stopped successfully');
     } catch (error) {
@@ -342,8 +348,14 @@ class AIMonitoringAgent {
   }
 
   setupMonitoring() {
+    if (this.monitorInterval) {
+      this.logger.debug('Monitoring already set up');
+      return;
+    }
+
     // Monitor processes every 5 seconds
-    setInterval(async () => {
+    clearInterval(this.monitorInterval);
+    this.monitorInterval = setInterval(async () => {
       if (!this.isRunning) return;
 
       try {
